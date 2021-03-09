@@ -1,4 +1,9 @@
-use ultralight_sys::{ulCreateOverlay, ulDestroyOverlay, ulOverlayGetView, ULOverlay};
+use ultralight_sys::{
+    ulCreateOverlay, ulDestroyOverlay, ulOverlayFocus, ulOverlayGetHeight, ulOverlayGetView,
+    ulOverlayGetWidth, ulOverlayGetX, ulOverlayGetY, ulOverlayHasFocus, ulOverlayHide,
+    ulOverlayIsHidden, ulOverlayMoveTo, ulOverlayResize, ulOverlayShow, ulOverlayUnfocus,
+    ULOverlay,
+};
 
 use crate::{View, Window};
 
@@ -19,6 +24,66 @@ impl Overlay {
 
     pub fn view(&self) -> View {
         unsafe { ulOverlayGetView(self.raw).into() }
+    }
+
+    pub fn hide(&self) {
+        unsafe {
+            ulOverlayHide(self.raw);
+        }
+    }
+
+    pub fn show(&self) {
+        unsafe {
+            ulOverlayShow(self.raw);
+        }
+    }
+
+    pub fn resize(&self, width: u32, height: u32) {
+        unsafe {
+            ulOverlayResize(self.raw, width, height);
+        }
+    }
+
+    pub fn move_to(&self, x: i32, y: i32) {
+        unsafe {
+            ulOverlayMoveTo(self.raw, x, y);
+        }
+    }
+
+    pub fn focus(&self) {
+        unsafe {
+            ulOverlayFocus(self.raw);
+        }
+    }
+
+    pub fn unfocus(&self) {
+        unsafe {
+            ulOverlayUnfocus(self.raw);
+        }
+    }
+
+    pub fn width(&self) -> u32 {
+        unsafe { ulOverlayGetWidth(self.raw) }
+    }
+
+    pub fn height(&self) -> u32 {
+        unsafe { ulOverlayGetHeight(self.raw) }
+    }
+
+    pub fn x(&self) -> i32 {
+        unsafe { ulOverlayGetX(self.raw) }
+    }
+
+    pub fn y(&self) -> i32 {
+        unsafe { ulOverlayGetY(self.raw) }
+    }
+
+    pub fn hidden(&self) -> bool {
+        unsafe { ulOverlayIsHidden(self.raw) }
+    }
+
+    pub fn has_focus(&self) -> bool {
+        unsafe { ulOverlayHasFocus(self.raw) }
     }
 }
 

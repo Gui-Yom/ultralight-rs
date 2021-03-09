@@ -57,6 +57,10 @@ impl App {
             ulAppSetWindow(self.raw, window.into());
         }
     }
+
+    pub fn running(&self) -> bool {
+        unsafe { ulAppIsRunning(self.raw) }
+    }
 }
 
 impl Into<ULApp> for App {

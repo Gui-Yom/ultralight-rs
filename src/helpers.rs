@@ -53,24 +53,3 @@ pub fn set_js_object_property(view: &View, name: &str, object: ultralight_sys::J
         });
     }
 }
-
-pub fn evaluate_script(view: &View, script: &str) -> Result<JSValue> {
-    unsafe {
-        // TODO script name for debugging
-        // TODO exception
-        Ok(view.use_js_ctx(|jsctx, jsroot| {
-            let result: JSValueRef = JSEvaluateScript(
-                jsctx,
-                JSString::from(script).raw,
-                jsroot,
-                null_mut(),
-                0,
-                null_mut(),
-            );
-            JSValue {
-                raw: result,
-                ctx: jsctx,
-            }
-        }))
-    }
-}

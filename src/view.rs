@@ -1,8 +1,13 @@
 use std::os::raw::c_void;
+use std::ptr::null_mut;
 
 use anyhow::Result;
 
-use ultralight_sys::{ulCreateView, ulDestroyView, ulViewLoadHTML, ULSession, ULView};
+use ultralight_sys::{
+    ulCreateView, ulDestroyView, ulViewCreateInspectorView, ulViewLoadHTML, ulViewLoadURL,
+    ulViewLockJSContext, ulViewReload, ulViewStop, ulViewUnlockJSContext, JSContextRef,
+    JSEvaluateScript, JSValueRef, ULSession, ULView,
+};
 
 use crate::helpers_internal::{log_forward_cb, unpack_closure_view_cb};
 use crate::jsc::JSValue;
@@ -38,7 +43,15 @@ impl View {
     }
 
     pub fn load_html(&self, html: &str) {
-        unsafe { ulViewLoadHTML(self.raw, ULString::from(html).into()) }
+        unsafe {
+            ulViewLoadHTML(self.raw, ULString::from(html).into());
+        }
+    }
+
+    pub fn load_url(&self, url: &str) {
+        unsafe {
+            ulViewLoadURL(self.raw, ULString::from(url).into());
+        }
     }
 
     pub fn scroll(&mut self, delta_x: i32, delta_y: i32) {
@@ -60,8 +73,22 @@ impl View {
             .map(|v| v.as_number().unwrap())
     }
 
-    pub fn evaluate_script(&mut self, script: &'static str) -> Result<JSValue> {
-        helpers::evaluate_script(self, script)
+    pub fn evaluate_script(&mut self, script: &str) -> Result<JSValue> {
+        unsafe {
+            let ctx = self.lock_js_ctx();
+            let result: JSValueRef = JSEvaluateScript(
+                ctx.ctx,
+                JSString::from(script).raw,
+                jsroot,
+                null_mut(),
+                0,
+                null_mut(),
+            );
+            Ok(JSValue {
+                raw: result,
+                ctx: jsctx,
+            })
+        }
     }
 
     pub fn log_to_stdout(&mut self) {
@@ -102,11 +129,48 @@ impl View {
     {
         unsafe {
             // TODO replaces types with their high-level bindings
-            let jsctx = ultralight_sys::ulViewLockJSContext(self.raw);
-            let jsroot = ultralight_sys::JSContextGetGlobalObject(jsctx);
-            let r = consumer(jsctx, jsroot);
-            ultralight_sys::ulViewUnlockJSContext(self.raw);
+            let jsctx = self.lock_js_ctx();
+            let jsroot = ultralight_sys::JSContextGetGlobalObject(jsctx.ctx);
+            let r = consumer(jsctx.ctx, jsroot);
             r
+        }
+    }
+
+    /// Retrieve the JS context for the current scope
+    pub fn lock_js_ctx(&self) -> JSCtxGuard {
+        unsafe {
+            JSCtxGuard {
+                ctx: ulViewLockJSContext(self.raw),
+                view: self,
+            }
+        }
+    }
+
+    /// Create an inspector for this View, this is useful for debugging and inspecting pages locally.
+    /// This will only succeed if you have the inspector assets in your filesystem
+    /// the inspector will look for file:///inspector/Main.html when it loads.
+    /// The initial dimensions of the returned View are 10x10, you should call ulViewResize on the
+    /// returned View to resize it to your desired dimensions.
+    /// You will need to call ulDestroyView on the returned instance when you're done using it.
+    pub fn create_inspector_view(&self) -> View {
+        unsafe {
+            // Special because we need to destroy it ourselves
+            View {
+                raw: ulViewCreateInspectorView(self.raw),
+                created: true,
+            }
+        }
+    }
+
+    pub fn reload(&self) {
+        unsafe {
+            ulViewReload(self.raw);
+        }
+    }
+
+    pub fn stop(&self) {
+        unsafe {
+            ulViewStop(self.raw);
         }
     }
 }
@@ -126,6 +190,19 @@ impl Drop for View {
             if self.created {
                 ulDestroyView(self.raw)
             }
+        }
+    }
+}
+
+pub struct JSCtxGuard<'a> {
+    pub ctx: JSContextRef,
+    view: &'a View,
+}
+
+impl Drop for JSCtxGuard<'_> {
+    fn drop(&mut self) {
+        unsafe {
+            ulViewUnlockJSContext(self.view.raw);
         }
     }
 }
