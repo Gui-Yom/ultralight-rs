@@ -7,43 +7,6 @@ use ultralight_sys::{ULMessageLevel, ULMessageSource, ULView};
 use crate::string::ULString;
 use crate::View;
 
-pub unsafe fn unpack_window_close_cb<F>(
-    closure: &mut F,
-) -> (*mut c_void, unsafe extern "C" fn(*mut c_void))
-where
-    F: FnMut(),
-{
-    extern "C" fn trampoline<F>(data: *mut c_void)
-    where
-        F: FnMut(),
-    {
-        let closure: &mut F = unsafe { &mut *(data as *mut F) };
-        (*closure)();
-    }
-
-    (closure as *mut F as *mut c_void, trampoline::<F>)
-}
-
-pub unsafe fn unpack_window_resize_cb<F>(
-    closure: &mut F,
-) -> (
-    *mut c_void,
-    unsafe extern "C" fn(*mut c_void, width: u32, height: u32),
-)
-where
-    F: FnMut(u32, u32),
-{
-    extern "C" fn trampoline<F>(data: *mut c_void, width: u32, height: u32)
-    where
-        F: FnMut(u32, u32),
-    {
-        let closure: &mut F = unsafe { &mut *(data as *mut F) };
-        (*closure)(width, height);
-    }
-
-    (closure as *mut F as *mut c_void, trampoline::<F>)
-}
-
 // All callbacks that accept take a (view: ULView) argument
 
 pub unsafe fn unpack_closure_view_cb<F>(

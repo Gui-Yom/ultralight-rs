@@ -20,5 +20,3 @@ pub mod settings;
 pub mod string;
 pub mod view;
 pub mod window;
-
-pub type Cursor = ultralight_sys::ULCursor;
