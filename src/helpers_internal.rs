@@ -102,8 +102,8 @@ where
 static msg_parsing_failed: &'static str = "!parsing failed!";
 
 pub unsafe extern "C" fn log_forward_cb(
-    user_data: *mut ::std::os::raw::c_void,
-    caller: ULView,
+    _user_data: *mut ::std::os::raw::c_void,
+    _caller: ULView,
     source: ULMessageSource,               /* u32 */
     level: ULMessageLevel,                 /* u32 */
     message: ultralight_sys::ULString,     /* *mut C_String aka *mut u8 */

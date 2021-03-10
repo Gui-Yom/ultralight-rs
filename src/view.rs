@@ -4,14 +4,15 @@ use std::ptr::null_mut;
 use anyhow::Result;
 
 use ultralight_sys::{
-    ulCreateView, ulDestroyView, ulViewCreateInspectorView, ulViewLoadHTML, ulViewLoadURL,
-    ulViewLockJSContext, ulViewReload, ulViewStop, ulViewUnlockJSContext, JSContextRef,
-    JSEvaluateScript, JSValueRef, ULSession, ULView,
+    ulCreateView, ulDestroyView, ulViewCreateInspectorView, ulViewGetRenderTarget,
+    ulViewGetSurface, ulViewLoadHTML, ulViewLoadURL, ulViewLockJSContext, ulViewReload, ulViewStop,
+    ulViewUnlockJSContext, JSContextGetGlobalObject, JSContextRef, JSEvaluateScript, JSValueRef,
+    ULRenderTarget, ULSession, ULSurface, ULView,
 };
 
 use crate::helpers_internal::{log_forward_cb, unpack_closure_view_cb};
-use crate::jsc::JSValue;
-use crate::{helpers, Renderer, ULString};
+use crate::jsc::{JSString, JSValue};
+use crate::{Renderer, ULString};
 
 pub struct View {
     pub(crate) raw: ULView,
@@ -75,18 +76,18 @@ impl View {
 
     pub fn evaluate_script(&mut self, script: &str) -> Result<JSValue> {
         unsafe {
-            let ctx = self.lock_js_ctx();
+            let jsctx = self.lock_js_ctx();
             let result: JSValueRef = JSEvaluateScript(
-                ctx.ctx,
+                jsctx.ctx,
                 JSString::from(script).raw,
-                jsroot,
+                JSContextGetGlobalObject(jsctx.ctx),
                 null_mut(),
                 0,
                 null_mut(),
             );
             Ok(JSValue {
                 raw: result,
-                ctx: jsctx,
+                ctx: jsctx.ctx,
             })
         }
     }
@@ -130,7 +131,7 @@ impl View {
         unsafe {
             // TODO replaces types with their high-level bindings
             let jsctx = self.lock_js_ctx();
-            let jsroot = ultralight_sys::JSContextGetGlobalObject(jsctx.ctx);
+            let jsroot = JSContextGetGlobalObject(jsctx.ctx);
             let r = consumer(jsctx.ctx, jsroot);
             r
         }
@@ -172,6 +173,14 @@ impl View {
         unsafe {
             ulViewStop(self.raw);
         }
+    }
+
+    pub fn render_target(&self) -> ULRenderTarget {
+        unsafe { ulViewGetRenderTarget(self.raw) }
+    }
+
+    pub fn surface(&self) -> ULSurface {
+        unsafe { ulViewGetSurface(self.raw) }
     }
 }
 

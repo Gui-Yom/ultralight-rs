@@ -1,13 +1,26 @@
-use log::info;
+use log::{info, Level};
 use simple_logger::SimpleLogger;
-use ultralight_rs::app::App;
-use ultralight_rs::config::Config;
-use ultralight_rs::overlay::Overlay;
-use ultralight_rs::settings::Settings;
-use ultralight_rs::window::{Window, WindowFlags};
+
+use ultralight_rs::{App, Config, Logger, Overlay, Settings, ULString, Window, WindowFlags};
+use ultralight_sys::ULLogLevel;
+
+struct LoggerImpl {}
+
+impl Logger for LoggerImpl {
+    fn log_message(level: ULLogLevel, message: ULString) {
+        let ll = match level {
+            ULLogLevel::kLogLevel_Error => Level::Error,
+            ULLogLevel::kLogLevel_Warning => Level::Warn,
+            ULLogLevel::kLogLevel_Info => Level::Info,
+        };
+        log::log!(target: "UL", ll, "{}", Into::<String>::into(message));
+    }
+}
 
 fn main() {
     SimpleLogger::new().init().unwrap();
+
+    ultralight_rs::platform_logger::<LoggerImpl>();
 
     let config = Config::new();
     let settings = Settings::new();

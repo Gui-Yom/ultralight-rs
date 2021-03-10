@@ -1,11 +1,5 @@
-use std::ptr::null_mut;
-
-use anyhow::Result;
-
-use ultralight_sys::{JSEvaluateScript, JSValueRef};
-
 use crate::helpers_internal::unpack_closure_hook_cb;
-use crate::jsc::{JSString, JSValue};
+use crate::jsc::JSString;
 use crate::View;
 
 pub fn create_js_function<T>(
