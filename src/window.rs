@@ -1,9 +1,10 @@
-use std::ffi::CString;
-use std::os::raw::c_void;
+use std::ffi::{c_void, CString};
 
 use ultralight_sys::{
-    ulCreateWindow, ulDestroyWindow, ulWindowClose, ulWindowSetCloseCallback, ulWindowSetCursor,
-    ulWindowSetResizeCallback, ulWindowSetTitle, ULCursor, ULWindow, ULWindowFlags,
+    ulCreateWindow, ulDestroyWindow, ulWindowClose, ulWindowDeviceToPixel, ulWindowGetHeight,
+    ulWindowGetNativeHandle, ulWindowGetScale, ulWindowGetWidth, ulWindowIsFullscreen,
+    ulWindowPixelsToDevice, ulWindowSetCloseCallback, ulWindowSetCursor, ulWindowSetResizeCallback,
+    ulWindowSetTitle, ULCursor, ULWindow, ULWindowFlags,
 };
 
 use crate::Monitor;
@@ -26,56 +27,76 @@ impl Window {
         }
     }
 
-    pub fn title(&mut self, title: &str) {
-        unsafe {
-            let str = CString::new(title).unwrap();
-            ulWindowSetTitle(self.raw, str.as_ptr());
-        }
-    }
-
     pub fn close(&self) {
         unsafe {
             ulWindowClose(self.raw);
         }
     }
 
-    pub fn cursor(&self, cursor: Cursor) {
+    pub fn set_title(&mut self, title: &str) {
+        unsafe {
+            let str = CString::new(title).unwrap();
+            ulWindowSetTitle(self.raw, str.as_ptr());
+        }
+    }
+
+    pub fn set_cursor(&self, cursor: Cursor) {
         unsafe {
             ulWindowSetCursor(self.raw, cursor);
         }
     }
 
-    pub fn resize_callback<F>(&self, cb: &mut F)
+    pub fn width(&self) -> u32 {
+        unsafe { ulWindowGetWidth(self.raw) }
+    }
+
+    pub fn height(&self) -> u32 {
+        unsafe { ulWindowGetHeight(self.raw) }
+    }
+
+    pub fn scale(&self) -> f64 {
+        unsafe { ulWindowGetScale(self.raw) }
+    }
+
+    pub fn is_fullscreen(&self) -> bool {
+        unsafe { ulWindowIsFullscreen(self.raw) }
+    }
+
+    pub fn native_handle(&self) -> *mut c_void {
+        unsafe { ulWindowGetNativeHandle(self.raw) }
+    }
+
+    pub fn device_to_pixel(&self, val: i32) -> i32 {
+        unsafe { ulWindowDeviceToPixel(self.raw, val) }
+    }
+
+    pub fn pixels_to_device(&self, val: i32) -> i32 {
+        unsafe { ulWindowPixelsToDevice(self.raw, val) }
+    }
+
+    pub fn set_resize_callback<F>(&mut self, cb: &mut F)
     where
         F: FnMut(u32, u32),
     {
         unsafe {
-            let (closure, func) = {
-                extern "C" fn trampoline<F>(data: *mut c_void, width: u32, height: u32)
-                where
-                    F: FnMut(u32, u32),
-                {
-                    let closure: &mut F = unsafe { &mut *(data as *mut F) };
-                    (*closure)(width, height);
-                }
-
-                (cb as *mut F as *mut c_void, trampoline::<F>)
-            };
-            ulWindowSetResizeCallback(self.raw, Some(func), closure);
+            extern "C" fn trampoline<F>(data: *mut c_void, width: u32, height: u32)
+            where
+                F: FnMut(u32, u32),
+            {
+                let closure = unsafe { &mut *(data as *mut F) };
+                closure(width, height);
+            }
+            ulWindowSetResizeCallback(self.raw, Some(trampoline::<F>), cb as *mut F as *mut c_void);
         }
     }
 
-    pub fn close_callback<F: FnMut()>(&self, cb: &mut F) {
+    pub fn set_close_callback<F: FnMut()>(&mut self, cb: &mut F) {
         unsafe {
-            let (closure, func) = {
-                extern "C" fn trampoline<F: FnMut()>(data: *mut c_void) {
-                    let closure: &mut F = unsafe { &mut *(data as *mut F) };
-                    (*closure)();
-                }
-
-                (cb as *mut F as *mut c_void, trampoline::<F>)
-            };
-            ulWindowSetCloseCallback(self.raw, Some(func), closure);
+            extern "C" fn trampoline<F: FnMut()>(data: *mut c_void) {
+                let closure = unsafe { &mut *(data as *mut F) };
+                closure();
+            }
+            ulWindowSetCloseCallback(self.raw, Some(trampoline::<F>), cb as *mut F as *mut c_void);
         }
     }
 }

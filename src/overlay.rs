@@ -38,13 +38,13 @@ impl Overlay {
         }
     }
 
-    pub fn resize(&self, width: u32, height: u32) {
+    pub fn resize(&mut self, width: u32, height: u32) {
         unsafe {
             ulOverlayResize(self.raw, width, height);
         }
     }
 
-    pub fn move_to(&self, x: i32, y: i32) {
+    pub fn move_to(&mut self, x: i32, y: i32) {
         unsafe {
             ulOverlayMoveTo(self.raw, x, y);
         }
@@ -78,7 +78,7 @@ impl Overlay {
         unsafe { ulOverlayGetY(self.raw) }
     }
 
-    pub fn hidden(&self) -> bool {
+    pub fn is_hidden(&self) -> bool {
         unsafe { ulOverlayIsHidden(self.raw) }
     }
 

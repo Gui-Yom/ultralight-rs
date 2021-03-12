@@ -1,8 +1,9 @@
+use std::ffi::c_void;
 use std::ptr::null_mut;
 
 use ultralight_sys::{
     ulAppGetMainMonitor, ulAppGetRenderer, ulAppGetWindow, ulAppIsRunning, ulAppQuit, ulAppRun,
-    ulAppSetWindow, ulCreateApp, ulDestroyApp, ULApp,
+    ulAppSetUpdateCallback, ulAppSetWindow, ulCreateApp, ulDestroyApp, ULApp,
 };
 
 use crate::{Config, Monitor, Renderer, Settings, Window};
@@ -58,8 +59,14 @@ impl App {
         }
     }
 
-    pub fn running(&self) -> bool {
-        unsafe { ulAppIsRunning(self.raw) }
+    pub fn set_update_callback<F: FnMut()>(&mut self, cb: &mut F) {
+        unsafe {
+            extern "C" fn trampoline<F: FnMut()>(data: *mut c_void) {
+                let closure = unsafe { &mut *(data as *mut F) };
+                closure();
+            }
+            ulAppSetUpdateCallback(self.raw, Some(trampoline::<F>), cb as *mut F as *mut c_void);
+        }
     }
 }
 

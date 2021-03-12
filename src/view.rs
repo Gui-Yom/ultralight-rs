@@ -4,10 +4,12 @@ use std::ptr::null_mut;
 use anyhow::Result;
 
 use ultralight_sys::{
-    ulCreateView, ulDestroyView, ulViewCreateInspectorView, ulViewGetRenderTarget,
-    ulViewGetSurface, ulViewLoadHTML, ulViewLoadURL, ulViewLockJSContext, ulViewReload, ulViewStop,
-    ulViewUnlockJSContext, JSContextGetGlobalObject, JSContextRef, JSEvaluateScript, JSValueRef,
-    ULRenderTarget, ULSession, ULSurface, ULView,
+    ulCreateScrollEvent, ulCreateView, ulDestroyScrollEvent, ulDestroyView,
+    ulViewCreateInspectorView, ulViewFireScrollEvent, ulViewGetRenderTarget, ulViewGetSurface,
+    ulViewLoadHTML, ulViewLoadURL, ulViewLockJSContext, ulViewReload,
+    ulViewSetAddConsoleMessageCallback, ulViewSetDOMReadyCallback, ulViewSetFinishLoadingCallback,
+    ulViewStop, ulViewUnlockJSContext, JSContextGetGlobalObject, JSContextRef, JSEvaluateScript,
+    JSValueRef, ULRenderTarget, ULScrollEventType, ULSession, ULSurface, ULView,
 };
 
 use crate::internal::{log_forward_cb, unpack_closure_view_cb};
@@ -57,15 +59,15 @@ impl View {
 
     pub fn scroll(&mut self, delta_x: i32, delta_y: i32) {
         unsafe {
-            let scroll_event = ultralight_sys::ulCreateScrollEvent(
-                ultralight_sys::ULScrollEventType::kScrollEventType_ScrollByPixel,
+            let scroll_event = ulCreateScrollEvent(
+                ULScrollEventType::kScrollEventType_ScrollByPixel,
                 delta_x,
                 delta_y,
             );
 
-            ultralight_sys::ulViewFireScrollEvent(self.raw, scroll_event);
+            ulViewFireScrollEvent(self.raw, scroll_event);
 
-            ultralight_sys::ulDestroyScrollEvent(scroll_event);
+            ulDestroyScrollEvent(scroll_event);
         }
     }
 
@@ -94,7 +96,7 @@ impl View {
 
     pub fn enable_default_logger(&mut self) {
         unsafe {
-            ultralight_sys::ulViewSetAddConsoleMessageCallback(
+            ulViewSetAddConsoleMessageCallback(
                 self.raw,
                 Some(log_forward_cb),
                 std::ptr::null_mut() as *mut c_void,
@@ -109,7 +111,7 @@ impl View {
         unsafe {
             let (cb_closure, cb_function) = unpack_closure_view_cb(cb);
 
-            ultralight_sys::ulViewSetFinishLoadingCallback(self.raw, Some(cb_function), cb_closure);
+            ulViewSetFinishLoadingCallback(self.raw, Some(cb_function), cb_closure);
         }
     }
 
@@ -120,7 +122,7 @@ impl View {
         unsafe {
             let (cb_closure, cb_function) = unpack_closure_view_cb(cb);
 
-            ultralight_sys::ulViewSetDOMReadyCallback(self.raw, Some(cb_function), cb_closure);
+            ulViewSetDOMReadyCallback(self.raw, Some(cb_function), cb_closure);
         }
     }
 
