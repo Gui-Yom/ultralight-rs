@@ -1,4 +1,4 @@
-use crate::helpers_internal::unpack_closure_hook_cb;
+use crate::internal::unpack_closure_hook_cb;
 use crate::jsc::JSString;
 use crate::View;
 

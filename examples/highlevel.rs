@@ -1,26 +1,15 @@
 use log::{info, Level};
 use simple_logger::SimpleLogger;
 
-use ultralight_rs::{App, Config, Logger, Overlay, Settings, ULString, Window, WindowFlags};
+use ultralight_rs::{
+    platform, App, Config, Logger, Overlay, Settings, ULString, Window, WindowFlags,
+};
 use ultralight_sys::ULLogLevel;
-
-struct LoggerImpl {}
-
-impl Logger for LoggerImpl {
-    fn log_message(level: ULLogLevel, message: ULString) {
-        let ll = match level {
-            ULLogLevel::kLogLevel_Error => Level::Error,
-            ULLogLevel::kLogLevel_Warning => Level::Warn,
-            ULLogLevel::kLogLevel_Info => Level::Info,
-        };
-        log::log!(target: "UL", ll, "{}", Into::<String>::into(message));
-    }
-}
 
 fn main() {
     SimpleLogger::new().init().unwrap();
 
-    ultralight_rs::platform_logger::<LoggerImpl>();
+    platform::enable_default_logger();
 
     let config = Config::new();
     let settings = Settings::new();
@@ -54,9 +43,12 @@ fn main() {
             <body>Hello</body>
         </html>"#,
     );
-    view.log_to_stdout();
+    view.enable_default_logger();
     view.set_dom_ready_callback(&mut |mut view, _, _, _| {
-        view.evaluate_script("console.log('hello from js'); 1 + 1");
+        let result = view
+            .evaluate_script("console.log('hello from js'); 1 + 1")
+            .unwrap();
+        info!("{}", result.as_number().unwrap());
     });
 
     app.run();

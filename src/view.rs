@@ -10,7 +10,7 @@ use ultralight_sys::{
     ULRenderTarget, ULSession, ULSurface, ULView,
 };
 
-use crate::helpers_internal::{log_forward_cb, unpack_closure_view_cb};
+use crate::internal::{log_forward_cb, unpack_closure_view_cb};
 use crate::jsc::{JSString, JSValue};
 use crate::{Renderer, ULString};
 
@@ -92,7 +92,7 @@ impl View {
         }
     }
 
-    pub fn log_to_stdout(&mut self) {
+    pub fn enable_default_logger(&mut self) {
         unsafe {
             ultralight_sys::ulViewSetAddConsoleMessageCallback(
                 self.raw,

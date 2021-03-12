@@ -7,8 +7,6 @@ use ultralight_sys::{ULMessageLevel, ULMessageSource, ULView};
 use crate::string::ULString;
 use crate::View;
 
-// All callbacks that accept take a (view: ULView) argument
-
 pub unsafe fn unpack_closure_view_cb<F>(
     closure: &mut F,
 ) -> (
@@ -99,17 +97,15 @@ where
     (closure as *mut F as *mut c_void, trampoline::<F>)
 }
 
-static msg_parsing_failed: &'static str = "!parsing failed!";
-
 pub unsafe extern "C" fn log_forward_cb(
     _user_data: *mut ::std::os::raw::c_void,
     _caller: ULView,
-    source: ULMessageSource,               /* u32 */
-    level: ULMessageLevel,                 /* u32 */
-    message: ultralight_sys::ULString,     /* *mut C_String aka *mut u8 */
-    line_number: ::std::os::raw::c_uint,   /* u32 */
-    column_number: ::std::os::raw::c_uint, /* u32 */
-    source_id: ultralight_sys::ULString,   /* *mut C_String aka *mut u8 */
+    source: ULMessageSource,
+    level: ULMessageLevel,
+    message: ultralight_sys::ULString,
+    line_number: ::std::os::raw::c_uint,
+    column_number: ::std::os::raw::c_uint,
+    source_id: ultralight_sys::ULString,
 ) {
     let level = match level {
         ULMessageLevel::kMessageLevel_Error => Level::Error,
