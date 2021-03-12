@@ -12,6 +12,7 @@ pub struct Settings {
 }
 
 impl Settings {
+    /// Create settings with default values
     pub fn new() -> Self {
         unsafe {
             Settings {

@@ -4,6 +4,7 @@ pub struct ULString {
     raw: ultralight_sys::ULString,
     created: bool,
 }
+// TODO complete ULString bindings
 
 impl From<&str> for ULString {
     fn from(value: &str) -> Self {

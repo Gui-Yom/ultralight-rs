@@ -22,6 +22,7 @@ pub type FaceWinding = ULFaceWinding;
 pub type FontHinting = ULFontHinting;
 
 impl Config {
+    /// Create config with default values
     pub fn new() -> Self {
         unsafe {
             Config {

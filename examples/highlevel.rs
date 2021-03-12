@@ -24,7 +24,15 @@ fn main() {
     );
     app.set_window(&window);
 
-    let mut overlay = Overlay::new(&window, 800, 480, 0, 0);
+    info!("Device to pixels : {}", window.device_to_pixel(800));
+    info!("Pixels to device : {}", window.pixels_to_device(800));
+    let mut overlay = Overlay::new(
+        &window,
+        window.device_to_pixel(800) as u32,
+        window.device_to_pixel(480) as u32,
+        0,
+        0,
+    );
 
     window.set_resize_callback(&mut |width, height| {
         overlay.resize(width, height);

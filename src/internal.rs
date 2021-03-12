@@ -3,6 +3,7 @@
 
 use std::ffi::c_void;
 use std::os::raw::{c_int, c_uint, c_ulonglong};
+use std::ptr::null_mut;
 
 use log::Level;
 
@@ -104,7 +105,7 @@ pub unsafe fn unpack_closure_view_create_child<F>(
     ) -> ULView,
 )
 where
-    F: FnMut(View, ULString, ULString, bool, ULIntRect) -> View,
+    F: FnMut(View, ULString, ULString, bool, ULIntRect) -> Option<View>,
 {
     extern "C" fn trampoline<F>(
         data: *mut c_void,
@@ -115,17 +116,20 @@ where
         popup_rect: ULIntRect,
     ) -> ULView
     where
-        F: FnMut(View, ULString, ULString, bool, ULIntRect) -> View,
+        F: FnMut(View, ULString, ULString, bool, ULIntRect) -> Option<View>,
     {
         let closure = unsafe { &mut *(data as *mut F) };
-        closure(
+        if let Some(view) = closure(
             caller.into(),
             opener_url.into(),
             target_url.into(),
             is_popup,
             popup_rect,
-        )
-        .raw
+        ) {
+            view.raw
+        } else {
+            null_mut()
+        }
     }
 
     (closure as *mut F as *mut c_void, trampoline::<F>)

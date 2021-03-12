@@ -10,12 +10,16 @@ use ultralight_sys::{
 
 use crate::ULString;
 
+/// Initializes the platform font loader and sets it as the current FontLoader.
 pub fn enable_fontloader() {
     unsafe {
         ulEnablePlatformFontLoader();
     }
 }
 
+/// Initializes the platform file system (needed for loading file:/// URLs)
+/// and sets it as the current FileSystem.
+/// You can specify a base directory path to resolve relative paths against.
 pub fn enable_default_filesystem(path: &str) {
     unsafe {
         ulEnablePlatformFileSystem(ULString::from(path).into());
@@ -93,6 +97,11 @@ where
     });
 }
 
+/// Set a custom Surface implementation.
+/// This can be used to wrap a platform-specific GPU texture, Windows DIB, macOS CGImage,
+/// or any other pixel buffer target for display on screen.
+/// By default, the library uses a bitmap surface for all surfaces but you can override this
+/// by providing your own surface definition here.
 pub fn set_surface_definition(surface_definition: ULSurfaceDefinition) {
     unsafe {
         ulPlatformSetSurfaceDefinition(surface_definition);
@@ -125,6 +134,11 @@ pub fn set_clipboard_impl<T: Clipboard>() {
     })
 }
 
+/// Set a custom Clipboard implementation.
+/// This should be used if you are using ulCreateRenderer()
+/// (which does not provide its own clipboard implementation).
+/// The Clipboard interface is used by the library to make calls to the
+/// system's native clipboard (eg, cut, copy, paste).
 pub fn set_clipboard(clipboard: ULClipboard) {
     unsafe {
         ulPlatformSetClipboard(clipboard);
@@ -145,12 +159,15 @@ pub fn set_logger_impl<T: Logger>() {
     });
 }
 
+/// Set a custom Logger implementation.
+/// This is used to log debug messages to the console or to a log file.
 pub fn set_logger(logger: ULLogger) {
     unsafe {
         ulPlatformSetLogger(logger);
     }
 }
 
+/// Enable a default logger implementation based on the `log` crate.
 pub fn enable_default_logger() {
     unsafe extern "C" fn logger(level: ULLogLevel, message: ultralight_sys::ULString) {
         let ll = match level {
@@ -229,14 +246,24 @@ pub fn set_filesystem_impl<T: Filesystem>() {
     });
 }
 
+/// Set a custom FileSystem implementation.
+/// This is used for loading File URLs (eg, file:///page.html).
+/// If you don't call this, and are not using ulCreateApp() or ulEnablePlatformFileSystem(),
+/// you will not be able to load any File URLs.
 pub fn set_filesystem(filesystem: ULFileSystem) {
     unsafe {
         ulPlatformSetFileSystem(filesystem);
     }
 }
 
+/// Set a custom GPUDriver implementation.
+// This should be used if you have enabled the GPU renderer in the Config and are using ulCreateRenderer()
+// (which does not provide its own GPUDriver implementation).
+// The GPUDriver interface is used by the library to dispatch GPU calls to your native GPU context
+// (eg, D3D11, Metal, OpenGL, Vulkan, etc.) There are reference implementations for this interface in the AppCore repo.
 pub fn set_gpu_driver(driver: ULGPUDriver) {
     unsafe {
         ulPlatformSetGPUDriver(driver);
     }
 }
+// TODO GpuDriver bindings

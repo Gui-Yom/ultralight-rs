@@ -30,6 +30,8 @@ pub struct View {
 }
 
 impl View {
+    /// Create a View with certain size (in pixels).
+    /// You can pass null to 'session' to use the default session.
     pub fn new(
         renderer: &Renderer,
         width: u32,
@@ -53,70 +55,95 @@ impl View {
         }
     }
 
+    /// Reload current page.
     pub fn reload(&self) {
         unsafe {
             ulViewReload(self.raw);
         }
     }
 
+    /// Stop all page loads.
     pub fn stop(&self) {
         unsafe {
             ulViewStop(self.raw);
         }
     }
 
+    /// Get the RenderTarget for the View.
+    /// Only valid when the GPU renderer is enabled in Config.
     pub fn render_target(&self) -> ULRenderTarget {
         unsafe { ulViewGetRenderTarget(self.raw) }
     }
 
+    /// Get the Surface for the View (native pixel buffer container).
+    /// Only valid when the GPU renderer is disabled in Config.
+    /// (Will return a nullptr when the GPU renderer is enabled.)
+    ///
+    /// The default Surface is BitmapSurface but you can provide your
+    /// own Surface implementation via ulPlatformSetSurfaceDefinition.
+    ///
+    /// When using the default Surface, you can retrieve the underlying
+    /// bitmap by casting ULSurface to ULBitmapSurface and calling ulBitmapSurfaceGetBitmap().
     pub fn surface(&self) -> ULSurface {
         unsafe { ulViewGetSurface(self.raw) }
     }
 
+    /// Load a raw string of HTML.
     pub fn load_html(&self, html: &str) {
         unsafe {
             ulViewLoadHTML(self.raw, ULString::from(html).into());
         }
     }
 
+    /// Load a URL into main frame.
     pub fn load_url(&self, url: &str) {
         unsafe {
             ulViewLoadURL(self.raw, ULString::from(url).into());
         }
     }
 
+    /// Resize view to a certain width and height (in pixels).
     pub fn resize(&mut self, width: u32, height: u32) {
         unsafe {
             ulViewResize(self.raw, width, height);
         }
     }
 
+    /// Get the width, in pixels.
     pub fn width(&self) -> u32 {
         unsafe { ulViewGetWidth(self.raw) }
     }
 
+    /// Get the height, in pixels.
     pub fn height(&self) -> u32 {
         unsafe { ulViewGetHeight(self.raw) }
     }
 
+    /// Get current title.
     pub fn title(&self) -> ULString {
         unsafe { ulViewGetTitle(self.raw).into() }
     }
 
+    /// Get current URL.
     pub fn url(&self) -> ULString {
         unsafe { ulViewGetURL(self.raw).into() }
     }
 
+    /// Whether or not a view should be painted during the next call to ulRender.
     pub fn needs_repaint(&self) -> bool {
         unsafe { ulViewGetNeedsPaint(self.raw) }
     }
 
+    /// Set whether or not a view should be repainted during the next call to ulRender.
+    /// This flag is automatically set whenever the page content changes but you can set it directly
+    /// in case you need to force a repaint.
     pub fn set_needs_repaint(&mut self, needs_repaint: bool) {
         unsafe {
             ulViewSetNeedsPaint(self.raw, needs_repaint);
         }
     }
 
+    /// Scroll the page.
     pub fn scroll(&mut self, delta_x: i32, delta_y: i32) {
         unsafe {
             let scroll_event = ulCreateScrollEvent(
@@ -136,13 +163,16 @@ impl View {
             .map(|v| v.as_number().unwrap())
     }
 
+    /// Evaluates a string of JavaScript.
+    ///
+    /// - `script` A JSString containing the script to evaluate.
     pub fn evaluate_script(&mut self, script: &str) -> Result<JSValue> {
         unsafe {
             let jsctx = self.lock_js_ctx();
             let result: JSValueRef = JSEvaluateScript(
                 jsctx.ctx,
                 JSString::from(script).raw,
-                JSContextGetGlobalObject(jsctx.ctx),
+                null_mut(),
                 null_mut(),
                 0,
                 null_mut(),
@@ -177,7 +207,7 @@ impl View {
         }
     }
 
-    /// Retrieve the JS context for the current scope
+    /// Retrieve the JS context for the current scope. See [Mutex] and [MutexGuard].
     pub fn lock_js_ctx(&self) -> JSCtxGuard {
         unsafe {
             JSCtxGuard {
@@ -203,6 +233,7 @@ impl View {
         }
     }
 
+    /// Set callback for when the page finishes loading a URL into a frame.
     pub fn on_finish_loading<T>(&mut self, cb: &mut T)
     where
         T: FnMut(View, u64, bool, ULString),
@@ -213,6 +244,8 @@ impl View {
         }
     }
 
+    /// Set callback for when all JavaScript has been parsed and the document is ready.
+    /// This is the best time to make any JavaScript calls that are dependent on DOM elements or scripts on the page.
     pub fn on_dom_ready<T>(&mut self, cb: &mut T)
     where
         T: FnMut(View, u64, bool, ULString),
@@ -223,6 +256,7 @@ impl View {
         }
     }
 
+    /// Set callback for when the page begins loading a new URL into a frame.
     pub fn on_begin_loading<F>(&mut self, cb: &mut F)
     where
         F: FnMut(View, u64, bool, ULString),
@@ -233,6 +267,7 @@ impl View {
         }
     }
 
+    /// Set callback for when the page title changes.
     pub fn on_change_title<F>(&mut self, cb: &mut F)
     where
         F: FnMut(View, ULString),
@@ -243,6 +278,7 @@ impl View {
         }
     }
 
+    /// Set callback for when the mouse cursor changes.
     pub fn on_change_cursor<F>(&mut self, cb: &mut F)
     where
         F: FnMut(View, Cursor),
@@ -253,6 +289,7 @@ impl View {
         }
     }
 
+    /// Set callback for when the page URL changes.
     pub fn on_change_url<F>(&mut self, cb: &mut F)
     where
         F: FnMut(View, ULString),
@@ -263,6 +300,7 @@ impl View {
         }
     }
 
+    /// Set callback for when the tooltip changes (usually result of a mouse hover).
     pub fn on_change_tooltip<F>(&mut self, cb: &mut F)
     where
         F: FnMut(View, ULString),
@@ -273,6 +311,12 @@ impl View {
         }
     }
 
+    /// Set callback for when the JavaScript window object is reset for a new page load.
+    /// This is called before any scripts are executed on the page and is the earliest time to setup
+    /// any initial JavaScript state or bindings.
+    /// The document is not guaranteed to be loaded/parsed at this point.
+    /// If you need to make any JavaScript calls that are dependent on DOM elements or scripts on the page, use DOMReady instead.
+    /// The window object is lazily initialized (this will not be called on pages with no scripts).
     pub fn on_window_ready<F>(&mut self, cb: &mut F)
     where
         F: FnMut(View, u64, bool, ULString),
@@ -283,9 +327,15 @@ impl View {
         }
     }
 
+    /// Set callback for when the page wants to create a new View.
+    /// This is usually the result of a user clicking a link with target="_blank"
+    /// or by JavaScript calling window.open(url).
+    /// To allow creation of these new Views, you should create a new View in this callback,
+    /// resize it to your container, and return it. You are responsible for displaying the returned View.
+    /// You should return None if you want to block the action.
     pub fn on_create_child_view<F>(&mut self, handler: &mut F)
     where
-        F: FnMut(View, ULString, ULString, bool, ULIntRect) -> View,
+        F: FnMut(View, ULString, ULString, bool, ULIntRect) -> Option<View>,
     {
         unsafe {
             let (user_data, callback) = unpack_closure_view_create_child(handler);
@@ -293,6 +343,7 @@ impl View {
         }
     }
 
+    /// Set callback for when an error occurs while loading a URL into a frame.
     pub fn on_fail_loading<F>(&mut self, cb: &mut F)
     where
         F: FnMut(View, u64, bool, ULString, ULString, ULString, i32),
@@ -303,6 +354,7 @@ impl View {
         }
     }
 
+    /// Set callback for when the history (back/forward state) is modified.
     pub fn on_update_history<F>(&mut self, cb: &mut F)
     where
         F: FnMut(View),
