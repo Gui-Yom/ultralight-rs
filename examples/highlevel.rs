@@ -1,9 +1,7 @@
 use log::{info, Level};
 use simple_logger::SimpleLogger;
 
-use ultralight_rs::{
-    platform, App, Config, Logger, Overlay, Settings, ULString, Window, WindowFlags,
-};
+use ultralight_rs::{platform, App, Config, Overlay, Settings, ULString, Window, WindowFlags};
 use ultralight_sys::ULLogLevel;
 
 fn main() {
@@ -17,7 +15,7 @@ fn main() {
 
     let mut app = App::new(&settings, &config);
 
-    let window = Window::new(
+    let mut window = Window::new(
         &app.main_monitor(),
         800,
         480,
@@ -26,8 +24,21 @@ fn main() {
     );
     app.set_window(&window);
 
-    let overlay = Overlay::new(&window, 800, 480, 0, 0);
+    let mut overlay = Overlay::new(&window, 800, 480, 0, 0);
+
+    window.set_resize_callback(&mut |width, height| {
+        overlay.resize(width, height);
+    });
+
     let mut view = overlay.view();
+    view.enable_default_logger();
+    view.on_dom_ready(&mut |mut view, _, _, _| {
+        let result = view
+            .evaluate_script("console.log('hello from js'); 1 + 1")
+            .unwrap();
+        info!("{}", result.as_number().unwrap());
+    });
+
     view.load_html(
         r#"
         <html>
@@ -40,16 +51,10 @@ fn main() {
                     }
                 </style>
             </head>
-            <body>Hello</body>
+            <body>Gibberish</body>
+            <script>console.log("hi");</script>
         </html>"#,
     );
-    view.enable_default_logger();
-    view.set_dom_ready_callback(&mut |mut view, _, _, _| {
-        let result = view
-            .evaluate_script("console.log('hello from js'); 1 + 1")
-            .unwrap();
-        info!("{}", result.as_number().unwrap());
-    });
 
     app.run();
     info!("Running !")

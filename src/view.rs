@@ -5,16 +5,24 @@ use anyhow::Result;
 
 use ultralight_sys::{
     ulCreateScrollEvent, ulCreateView, ulDestroyScrollEvent, ulDestroyView,
-    ulViewCreateInspectorView, ulViewFireScrollEvent, ulViewGetRenderTarget, ulViewGetSurface,
-    ulViewLoadHTML, ulViewLoadURL, ulViewLockJSContext, ulViewReload,
-    ulViewSetAddConsoleMessageCallback, ulViewSetDOMReadyCallback, ulViewSetFinishLoadingCallback,
-    ulViewStop, ulViewUnlockJSContext, JSContextGetGlobalObject, JSContextRef, JSEvaluateScript,
-    JSValueRef, ULRenderTarget, ULScrollEventType, ULSession, ULSurface, ULView,
+    ulViewCreateInspectorView, ulViewFireScrollEvent, ulViewGetHeight, ulViewGetNeedsPaint,
+    ulViewGetRenderTarget, ulViewGetSurface, ulViewGetTitle, ulViewGetURL, ulViewGetWidth,
+    ulViewLoadHTML, ulViewLoadURL, ulViewLockJSContext, ulViewReload, ulViewResize,
+    ulViewSetAddConsoleMessageCallback, ulViewSetBeginLoadingCallback,
+    ulViewSetChangeCursorCallback, ulViewSetChangeTitleCallback, ulViewSetChangeTooltipCallback,
+    ulViewSetChangeURLCallback, ulViewSetCreateChildViewCallback, ulViewSetDOMReadyCallback,
+    ulViewSetFailLoadingCallback, ulViewSetFinishLoadingCallback, ulViewSetNeedsPaint,
+    ulViewSetUpdateHistoryCallback, ulViewSetWindowObjectReadyCallback, ulViewStop,
+    ulViewUnlockJSContext, JSContextGetGlobalObject, JSContextRef, JSEvaluateScript, JSValueRef,
+    ULIntRect, ULRenderTarget, ULScrollEventType, ULSession, ULSurface, ULView,
 };
 
-use crate::internal::{log_forward_cb, unpack_closure_view_cb};
+use crate::internal::{
+    log_forward_cb, unpack_closure_view_0, unpack_closure_view_1, unpack_closure_view_create_child,
+    unpack_closure_view_cursor, unpack_closure_view_fail_loading, unpack_closure_view_history,
+};
 use crate::jsc::{JSString, JSValue};
-use crate::{Renderer, ULString};
+use crate::{Cursor, Renderer, ULString};
 
 pub struct View {
     pub(crate) raw: ULView,
@@ -45,6 +53,26 @@ impl View {
         }
     }
 
+    pub fn reload(&self) {
+        unsafe {
+            ulViewReload(self.raw);
+        }
+    }
+
+    pub fn stop(&self) {
+        unsafe {
+            ulViewStop(self.raw);
+        }
+    }
+
+    pub fn render_target(&self) -> ULRenderTarget {
+        unsafe { ulViewGetRenderTarget(self.raw) }
+    }
+
+    pub fn surface(&self) -> ULSurface {
+        unsafe { ulViewGetSurface(self.raw) }
+    }
+
     pub fn load_html(&self, html: &str) {
         unsafe {
             ulViewLoadHTML(self.raw, ULString::from(html).into());
@@ -54,6 +82,38 @@ impl View {
     pub fn load_url(&self, url: &str) {
         unsafe {
             ulViewLoadURL(self.raw, ULString::from(url).into());
+        }
+    }
+
+    pub fn resize(&mut self, width: u32, height: u32) {
+        unsafe {
+            ulViewResize(self.raw, width, height);
+        }
+    }
+
+    pub fn width(&self) -> u32 {
+        unsafe { ulViewGetWidth(self.raw) }
+    }
+
+    pub fn height(&self) -> u32 {
+        unsafe { ulViewGetHeight(self.raw) }
+    }
+
+    pub fn title(&self) -> ULString {
+        unsafe { ulViewGetTitle(self.raw).into() }
+    }
+
+    pub fn url(&self) -> ULString {
+        unsafe { ulViewGetURL(self.raw).into() }
+    }
+
+    pub fn needs_repaint(&self) -> bool {
+        unsafe { ulViewGetNeedsPaint(self.raw) }
+    }
+
+    pub fn set_needs_repaint(&mut self, needs_repaint: bool) {
+        unsafe {
+            ulViewSetNeedsPaint(self.raw, needs_repaint);
         }
     }
 
@@ -104,28 +164,6 @@ impl View {
         }
     }
 
-    pub fn set_finish_loading_callback<T>(&mut self, cb: &mut T)
-    where
-        T: FnMut(View, u64, bool, &str),
-    {
-        unsafe {
-            let (cb_closure, cb_function) = unpack_closure_view_cb(cb);
-
-            ulViewSetFinishLoadingCallback(self.raw, Some(cb_function), cb_closure);
-        }
-    }
-
-    pub fn set_dom_ready_callback<T>(&mut self, cb: &mut T)
-    where
-        T: FnMut(View, u64, bool, &str),
-    {
-        unsafe {
-            let (cb_closure, cb_function) = unpack_closure_view_cb(cb);
-
-            ulViewSetDOMReadyCallback(self.raw, Some(cb_function), cb_closure);
-        }
-    }
-
     pub fn use_js_ctx<F, R>(&self, consumer: F) -> R
     where
         F: Fn(ultralight_sys::JSContextRef, ultralight_sys::JSObjectRef) -> R,
@@ -165,24 +203,114 @@ impl View {
         }
     }
 
-    pub fn reload(&self) {
+    pub fn on_finish_loading<T>(&mut self, cb: &mut T)
+    where
+        T: FnMut(View, u64, bool, ULString),
+    {
         unsafe {
-            ulViewReload(self.raw);
+            let (user_data, callback) = unpack_closure_view_0(cb);
+            ulViewSetFinishLoadingCallback(self.raw, Some(callback), user_data);
         }
     }
 
-    pub fn stop(&self) {
+    pub fn on_dom_ready<T>(&mut self, cb: &mut T)
+    where
+        T: FnMut(View, u64, bool, ULString),
+    {
         unsafe {
-            ulViewStop(self.raw);
+            let (user_data, callback) = unpack_closure_view_0(cb);
+            ulViewSetDOMReadyCallback(self.raw, Some(callback), user_data);
         }
     }
 
-    pub fn render_target(&self) -> ULRenderTarget {
-        unsafe { ulViewGetRenderTarget(self.raw) }
+    pub fn on_begin_loading<F>(&mut self, cb: &mut F)
+    where
+        F: FnMut(View, u64, bool, ULString),
+    {
+        unsafe {
+            let (user_data, callback) = unpack_closure_view_0(cb);
+            ulViewSetBeginLoadingCallback(self.raw, Some(callback), user_data);
+        }
     }
 
-    pub fn surface(&self) -> ULSurface {
-        unsafe { ulViewGetSurface(self.raw) }
+    pub fn on_change_title<F>(&mut self, cb: &mut F)
+    where
+        F: FnMut(View, ULString),
+    {
+        unsafe {
+            let (user_data, callback) = unpack_closure_view_1(cb);
+            ulViewSetChangeTitleCallback(self.raw, Some(callback), user_data);
+        }
+    }
+
+    pub fn on_change_cursor<F>(&mut self, cb: &mut F)
+    where
+        F: FnMut(View, Cursor),
+    {
+        unsafe {
+            let (user_data, callback) = unpack_closure_view_cursor(cb);
+            ulViewSetChangeCursorCallback(self.raw, Some(callback), user_data);
+        }
+    }
+
+    pub fn on_change_url<F>(&mut self, cb: &mut F)
+    where
+        F: FnMut(View, ULString),
+    {
+        unsafe {
+            let (user_data, callback) = unpack_closure_view_1(cb);
+            ulViewSetChangeURLCallback(self.raw, Some(callback), user_data);
+        }
+    }
+
+    pub fn on_change_tooltip<F>(&mut self, cb: &mut F)
+    where
+        F: FnMut(View, ULString),
+    {
+        unsafe {
+            let (user_data, callback) = unpack_closure_view_1(cb);
+            ulViewSetChangeTooltipCallback(self.raw, Some(callback), user_data);
+        }
+    }
+
+    pub fn on_window_ready<F>(&mut self, cb: &mut F)
+    where
+        F: FnMut(View, u64, bool, ULString),
+    {
+        unsafe {
+            let (user_data, callback) = unpack_closure_view_0(cb);
+            ulViewSetWindowObjectReadyCallback(self.raw, Some(callback), user_data);
+        }
+    }
+
+    pub fn on_create_child_view<F>(&mut self, handler: &mut F)
+    where
+        F: FnMut(View, ULString, ULString, bool, ULIntRect) -> View,
+    {
+        unsafe {
+            let (user_data, callback) = unpack_closure_view_create_child(handler);
+            ulViewSetCreateChildViewCallback(self.raw, Some(callback), user_data);
+        }
+    }
+
+    pub fn on_fail_loading<F>(&mut self, cb: &mut F)
+    where
+        F: FnMut(View, u64, bool, ULString, ULString, ULString, i32),
+    {
+        unsafe {
+            let (user_data, callback) = unpack_closure_view_fail_loading(cb);
+            ulViewSetFailLoadingCallback(self.raw, Some(callback), user_data);
+        }
+    }
+
+    pub fn on_update_history<F>(&mut self, cb: &mut F)
+    where
+        F: FnMut(View),
+    {
+        unsafe {
+            let (user_data, callback) = unpack_closure_view_history(cb);
+            ulViewSetUpdateHistoryCallback(self.raw, Some(callback), user_data);
+        }
     }
 }
 

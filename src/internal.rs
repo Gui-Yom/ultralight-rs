@@ -1,43 +1,202 @@
-use std::os::raw::c_void;
+//! Various functions to unpack closures and get a function pointer.
+//! We need to define a trampoline for each closure signature
+
+use std::ffi::c_void;
+use std::os::raw::{c_int, c_uint, c_ulonglong};
 
 use log::Level;
 
-use ultralight_sys::{ULMessageLevel, ULMessageSource, ULView};
+use ultralight_sys::{ULIntRect, ULMessageLevel, ULMessageSource, ULView};
 
 use crate::string::ULString;
-use crate::View;
+use crate::{Cursor, View};
 
-pub unsafe fn unpack_closure_view_cb<F>(
+/// Unpacks a closure for that specific signature
+/// Valid for :
+/// - [ULFinishLoadingCallback]
+/// - [ULDOMReadyCallback]
+/// - [ULBeginLoadingCallback]
+/// - [ULWindowObjectReadyCallback]
+pub unsafe fn unpack_closure_view_0<F>(
+    closure: &mut F,
+) -> (
+    *mut c_void,
+    unsafe extern "C" fn(*mut c_void, ULView, c_ulonglong, bool, ultralight_sys::ULString),
+)
+where
+    F: FnMut(View, u64, bool, ULString),
+{
+    extern "C" fn trampoline<F>(
+        data: *mut c_void,
+        caller: ULView,
+        frame_id: c_ulonglong,
+        is_main_frame: bool,
+        url: ultralight_sys::ULString,
+    ) where
+        F: FnMut(View, u64, bool, ULString),
+    {
+        let closure = unsafe { &mut *(data as *mut F) };
+        closure(caller.into(), frame_id, is_main_frame, url.into());
+    }
+
+    (closure as *mut F as *mut c_void, trampoline::<F>)
+}
+
+/// Unpacks a closure for that specific signature
+/// Valid for :
+/// - [ULChangeTitleCallback]
+/// - [ULChangeURLCallback]
+/// - [ULChangeTooltipCallback]
+pub unsafe fn unpack_closure_view_1<F>(
+    closure: &mut F,
+) -> (
+    *mut c_void,
+    unsafe extern "C" fn(*mut c_void, ULView, ultralight_sys::ULString),
+)
+where
+    F: FnMut(View, ULString),
+{
+    extern "C" fn trampoline<F>(data: *mut c_void, caller: ULView, value: ultralight_sys::ULString)
+    where
+        F: FnMut(View, ULString),
+    {
+        let closure = unsafe { &mut *(data as *mut F) };
+        closure(caller.into(), value.into());
+    }
+
+    (closure as *mut F as *mut c_void, trampoline::<F>)
+}
+
+/// Unpacks a closure for that specific signature
+/// Valid for :
+/// - [ULUpdateHistoryCallback]
+pub unsafe fn unpack_closure_view_history<F>(
+    closure: &mut F,
+) -> (*mut c_void, unsafe extern "C" fn(*mut c_void, ULView))
+where
+    F: FnMut(View),
+{
+    extern "C" fn trampoline<F>(data: *mut c_void, caller: ULView)
+    where
+        F: FnMut(View),
+    {
+        let closure = unsafe { &mut *(data as *mut F) };
+        closure(caller.into());
+    }
+
+    (closure as *mut F as *mut c_void, trampoline::<F>)
+}
+
+/// Unpacks a closure for that specific signature
+/// Valid for :
+/// - [ULFailLoadingCallback]
+pub unsafe fn unpack_closure_view_create_child<F>(
     closure: &mut F,
 ) -> (
     *mut c_void,
     unsafe extern "C" fn(
         *mut c_void,
         ULView,
-        std::os::raw::c_ulonglong,
-        bool,
         ultralight_sys::ULString,
-    ),
+        ultralight_sys::ULString,
+        bool,
+        ULIntRect,
+    ) -> ULView,
 )
 where
-    F: FnMut(View, std::os::raw::c_ulonglong, bool, &str),
+    F: FnMut(View, ULString, ULString, bool, ULIntRect) -> View,
 {
     extern "C" fn trampoline<F>(
         data: *mut c_void,
         caller: ULView,
-        frame_id: std::os::raw::c_ulonglong,
+        opener_url: ultralight_sys::ULString,
+        target_url: ultralight_sys::ULString,
+        is_popup: bool,
+        popup_rect: ULIntRect,
+    ) -> ULView
+    where
+        F: FnMut(View, ULString, ULString, bool, ULIntRect) -> View,
+    {
+        let closure = unsafe { &mut *(data as *mut F) };
+        closure(
+            caller.into(),
+            opener_url.into(),
+            target_url.into(),
+            is_popup,
+            popup_rect,
+        )
+        .raw
+    }
+
+    (closure as *mut F as *mut c_void, trampoline::<F>)
+}
+
+/// Unpacks a closure for that specific signature
+/// Valid for :
+/// - [ULFailLoadingCallback]
+pub unsafe fn unpack_closure_view_fail_loading<F>(
+    closure: &mut F,
+) -> (
+    *mut c_void,
+    unsafe extern "C" fn(
+        *mut c_void,
+        ULView,
+        c_ulonglong,
+        bool,
+        ultralight_sys::ULString,
+        ultralight_sys::ULString,
+        ultralight_sys::ULString,
+        c_int,
+    ),
+)
+where
+    F: FnMut(View, u64, bool, ULString, ULString, ULString, i32),
+{
+    extern "C" fn trampoline<F>(
+        data: *mut c_void,
+        caller: ULView,
+        frame_id: u64,
         is_main_frame: bool,
         url: ultralight_sys::ULString,
+        description: ultralight_sys::ULString,
+        error_domain: ultralight_sys::ULString,
+        error_code: i32,
     ) where
-        F: FnMut(View, std::os::raw::c_ulonglong, bool, &str),
+        F: FnMut(View, u64, bool, ULString, ULString, ULString, i32),
     {
-        let closure: &mut F = unsafe { &mut *(data as *mut F) };
-        (*closure)(
+        let closure = unsafe { &mut *(data as *mut F) };
+        closure(
             caller.into(),
             frame_id,
             is_main_frame,
-            &Into::<String>::into(ULString::from(url)),
+            url.into(),
+            description.into(),
+            error_domain.into(),
+            error_code,
         );
+    }
+
+    (closure as *mut F as *mut c_void, trampoline::<F>)
+}
+
+/// Unpacks a closure for that specific signature
+/// Valid for :
+/// - [ULChangeCursorCallback]
+pub unsafe fn unpack_closure_view_cursor<F>(
+    closure: &mut F,
+) -> (
+    *mut c_void,
+    unsafe extern "C" fn(*mut c_void, ULView, Cursor),
+)
+where
+    F: FnMut(View, Cursor),
+{
+    extern "C" fn trampoline<F>(data: *mut c_void, caller: ULView, cursor: Cursor)
+    where
+        F: FnMut(View, Cursor),
+    {
+        let closure = unsafe { &mut *(data as *mut F) };
+        closure(caller.into(), cursor);
     }
 
     (closure as *mut F as *mut c_void, trampoline::<F>)
@@ -98,13 +257,13 @@ where
 }
 
 pub unsafe extern "C" fn log_forward_cb(
-    _user_data: *mut ::std::os::raw::c_void,
+    _user_data: *mut c_void,
     _caller: ULView,
     source: ULMessageSource,
     level: ULMessageLevel,
     message: ultralight_sys::ULString,
-    line_number: ::std::os::raw::c_uint,
-    column_number: ::std::os::raw::c_uint,
+    line_number: c_uint,
+    column_number: c_uint,
     source_id: ultralight_sys::ULString,
 ) {
     let level = match level {
