@@ -14,7 +14,7 @@ use ultralight_sys::{
     ulViewSetFailLoadingCallback, ulViewSetFinishLoadingCallback, ulViewSetNeedsPaint,
     ulViewSetUpdateHistoryCallback, ulViewSetWindowObjectReadyCallback, ulViewStop,
     ulViewUnlockJSContext, JSContextGetGlobalObject, JSContextRef, JSEvaluateScript, JSValueRef,
-    ULIntRect, ULRenderTarget, ULScrollEventType, ULSession, ULSurface, ULView,
+    ULIntRect, ULRenderTarget, ULScrollEventType, ULSurface, ULView,
 };
 
 use crate::internal::{
@@ -22,7 +22,7 @@ use crate::internal::{
     unpack_closure_view_cursor, unpack_closure_view_fail_loading, unpack_closure_view_history,
 };
 use crate::jsc::{JSString, JSValue};
-use crate::{Cursor, Renderer, ULString};
+use crate::{Cursor, Renderer, Session, ULString};
 
 pub struct View {
     pub(crate) raw: ULView,
@@ -37,17 +37,17 @@ impl View {
         width: u32,
         height: u32,
         transparent: bool,
-        session: ULSession,
+        session: Session,
         force_cpu_renderer: bool,
     ) -> Self {
         unsafe {
             View {
                 raw: ulCreateView(
-                    renderer.into(),
+                    renderer.raw,
                     width,
                     height,
                     transparent,
-                    session,
+                    session.raw,
                     force_cpu_renderer,
                 ),
                 created: true,

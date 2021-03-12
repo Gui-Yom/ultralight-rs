@@ -253,12 +253,6 @@ impl From<ULConfig> for Config {
     }
 }
 
-impl Into<ULConfig> for &Config {
-    fn into(self) -> ULConfig {
-        self.raw
-    }
-}
-
 impl Drop for Config {
     fn drop(&mut self) {
         unsafe {

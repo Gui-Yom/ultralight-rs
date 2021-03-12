@@ -24,7 +24,7 @@ impl App {
     pub fn new(settings: &Settings, config: &Config) -> Self {
         unsafe {
             App {
-                raw: ulCreateApp(settings.into(), config.into()),
+                raw: ulCreateApp(settings.raw, config.raw),
             }
         }
     }
@@ -85,7 +85,7 @@ impl App {
     /// - `window` The window to use for all rendering.
     pub fn set_window(&mut self, window: &Window) {
         unsafe {
-            ulAppSetWindow(self.raw, window.into());
+            ulAppSetWindow(self.raw, window.raw);
         }
     }
 
@@ -100,12 +100,6 @@ impl App {
             }
             ulAppSetUpdateCallback(self.raw, Some(trampoline::<F>), cb as *mut F as *mut c_void);
         }
-    }
-}
-
-impl Into<ULApp> for App {
-    fn into(self) -> ULApp {
-        self.raw
     }
 }
 

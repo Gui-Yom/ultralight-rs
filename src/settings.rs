@@ -84,12 +84,6 @@ impl From<ULSettings> for Settings {
     }
 }
 
-impl Into<ULSettings> for &Settings {
-    fn into(self) -> ULSettings {
-        self.raw
-    }
-}
-
 impl Drop for Settings {
     fn drop(&mut self) {
         unsafe {

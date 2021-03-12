@@ -10,11 +10,10 @@ use ultralight_sys::{
 use crate::Monitor;
 
 pub struct Window {
-    raw: ULWindow,
+    pub raw: ULWindow,
     created: bool,
 }
 
-// TODO better bitfield enum (bitfield crate ?)
 pub type WindowFlags = ULWindowFlags;
 pub type Cursor = ULCursor;
 
@@ -130,12 +129,6 @@ impl From<ULWindow> for Window {
             raw,
             created: false,
         }
-    }
-}
-
-impl Into<ULWindow> for &Window {
-    fn into(self) -> ULWindow {
-        self.raw
     }
 }
 

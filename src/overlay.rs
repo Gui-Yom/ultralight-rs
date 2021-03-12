@@ -26,7 +26,7 @@ impl Overlay {
     pub fn new(window: &Window, width: u32, height: u32, x: i32, y: i32) -> Self {
         unsafe {
             Overlay {
-                raw: ulCreateOverlay(window.into(), width, height, x, y),
+                raw: ulCreateOverlay(window.raw, width, height, x, y),
                 created: true,
             }
         }
@@ -116,12 +116,6 @@ impl From<ULOverlay> for Overlay {
             raw,
             created: false,
         }
-    }
-}
-
-impl Into<ULOverlay> for Overlay {
-    fn into(self) -> ULOverlay {
-        self.raw
     }
 }
 

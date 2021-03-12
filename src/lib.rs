@@ -7,6 +7,7 @@ pub use crate::config::*;
 pub use crate::monitor::*;
 pub use crate::overlay::*;
 pub use crate::renderer::*;
+pub use crate::session::*;
 pub use crate::settings::*;
 pub use crate::string::*;
 pub use crate::view::*;
@@ -23,6 +24,7 @@ mod overlay;
 /// Functions that control Ultralight environment like filesystem and clipboard.
 pub mod platform;
 mod renderer;
+mod session;
 mod settings;
 mod string;
 mod view;
