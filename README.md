@@ -1,8 +1,8 @@
 # ultralight-rs
 
-Rustified API for ultralight. See examples.
+Handcrafted Rust API for ultralight. See examples.
 
-## ultralight-sys
+## Raw bindings
 
 `/ultralight-sys` contains the raw straight-out-of-bindgen bindings.
 
@@ -14,6 +14,6 @@ Latest version : 1.2.1.
 
 Set `ULTRALIGHT_SDK` env var to where Ultralight SDK is installed.
 
-### Credits
+## Credits
 
 Heavily inspired by [psychonautwiki/rust-ul](https://github.com/psychonautwiki/rust-ul)

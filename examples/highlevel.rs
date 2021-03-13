@@ -1,8 +1,9 @@
-use log::{info, Level};
+use std::ops::BitOr;
+
+use log::info;
 use simple_logger::SimpleLogger;
 
-use ultralight_rs::{platform, App, Config, Overlay, Settings, ULString, Window, WindowFlags};
-use ultralight_sys::ULLogLevel;
+use ultralight_rs::{platform, App, Config, Overlay, Settings, Window, WindowFlags};
 
 fn main() {
     SimpleLogger::new().init().unwrap();
@@ -20,12 +21,14 @@ fn main() {
         800,
         480,
         false,
-        WindowFlags::kWindowFlags_Titled.0 as u32,
+        WindowFlags::kWindowFlags_Titled
+            .bitor(WindowFlags::kWindowFlags_Resizable)
+            .0 as u32,
     );
+    window.set_title("Ultralight-rs example - highlevel");
     app.set_window(&window);
+    app.renderer().log_memory_usage();
 
-    info!("Device to pixels : {}", window.device_to_pixel(800));
-    info!("Pixels to device : {}", window.pixels_to_device(800));
     let mut overlay = Overlay::new(
         &window,
         window.device_to_pixel(800) as u32,
@@ -65,5 +68,5 @@ fn main() {
     );
 
     app.run();
-    info!("Running !")
+    info!("Closing !")
 }
