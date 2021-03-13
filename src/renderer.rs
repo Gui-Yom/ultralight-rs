@@ -59,9 +59,7 @@ impl Renderer {
         }
     }
 
-    // TODO ULBitmap bindings
     // TODO Events bindings
-    // TODO ULSurface bindings
 }
 
 impl From<ULRenderer> for Renderer {

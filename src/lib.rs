@@ -3,6 +3,7 @@ use std::ffi::CString;
 use ultralight_sys::{ulVersionMajor, ulVersionMinor, ulVersionPatch, ulVersionString};
 
 pub use crate::app::*;
+pub use crate::bitmap::*;
 pub use crate::config::*;
 pub use crate::monitor::*;
 pub use crate::overlay::*;
@@ -10,10 +11,12 @@ pub use crate::renderer::*;
 pub use crate::session::*;
 pub use crate::settings::*;
 pub use crate::string::*;
+pub use crate::surface::*;
 pub use crate::view::*;
 pub use crate::window::*;
 
 mod app;
+mod bitmap;
 mod config;
 pub mod helpers;
 mod internal;
@@ -27,6 +30,7 @@ mod renderer;
 mod session;
 mod settings;
 mod string;
+mod surface;
 mod view;
 mod window;
 

@@ -14,7 +14,7 @@ use ultralight_sys::{
     ulViewSetFailLoadingCallback, ulViewSetFinishLoadingCallback, ulViewSetNeedsPaint,
     ulViewSetUpdateHistoryCallback, ulViewSetWindowObjectReadyCallback, ulViewStop,
     ulViewUnlockJSContext, JSContextGetGlobalObject, JSContextRef, JSEvaluateScript, JSValueRef,
-    ULIntRect, ULRenderTarget, ULScrollEventType, ULSurface, ULView,
+    ULIntRect, ULRenderTarget, ULScrollEventType, ULView,
 };
 
 use crate::internal::{
@@ -22,7 +22,7 @@ use crate::internal::{
     unpack_closure_view_cursor, unpack_closure_view_fail_loading, unpack_closure_view_history,
 };
 use crate::jsc::{JSString, JSValue};
-use crate::{Cursor, Renderer, Session, ULString};
+use crate::{Cursor, Renderer, Session, Surface, ULString};
 
 pub struct View {
     pub(crate) raw: ULView,
@@ -37,7 +37,7 @@ impl View {
         width: u32,
         height: u32,
         transparent: bool,
-        session: Session,
+        session: &Session,
         force_cpu_renderer: bool,
     ) -> Self {
         unsafe {
@@ -84,8 +84,8 @@ impl View {
     ///
     /// When using the default Surface, you can retrieve the underlying
     /// bitmap by casting ULSurface to ULBitmapSurface and calling ulBitmapSurfaceGetBitmap().
-    pub fn surface(&self) -> ULSurface {
-        unsafe { ulViewGetSurface(self.raw) }
+    pub fn surface(&self) -> Surface {
+        unsafe { ulViewGetSurface(self.raw).into() }
     }
 
     /// Load a raw string of HTML.
